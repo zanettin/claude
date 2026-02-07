@@ -1,0 +1,14 @@
+  history.jsonl
+# Machine-specific state
+chrome/
+downloads/
+projects/
+session-env/
+shell-snapshots/
+tasks/
+todos/
+
+# Analytics and caching
+statsig/
+telemetry/
+stats-cache.json
