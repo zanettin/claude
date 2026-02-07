@@ -1,4 +1,5 @@
-  history.jsonl
+history.jsonl
+
 # Machine-specific state
 chrome/
 downloads/
@@ -7,6 +8,7 @@ session-env/
 shell-snapshots/
 tasks/
 todos/
+debug/
 
 # Analytics and caching
 statsig/
