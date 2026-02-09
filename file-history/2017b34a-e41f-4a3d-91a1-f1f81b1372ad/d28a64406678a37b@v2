@@ -1,0 +1,101 @@
+# Orbit Project Memory
+
+## Core Stack
+- Astro 5 (SSR, `@astrojs/node` adapter, middleware mode), Vite 6, Node 24, pnpm 10, NX 22
+- **Fastify** production server (`@dtc/astro-server`), not default Astro standalone
+- **Alpine.js** for client-side interactivity — prefix is `data-x-` (NOT `x-`), setup in `apps/*/src/alpine-setup.ts`
+- **React** only for specific interactive islands (e.g. boersenspiel stock game), NOT the general UI framework
+- **Tailwind CSS 4** — CSS-first config (no JS config file), `@tailwindcss/vite` plugin
+- **ts-pattern** for type-safe pattern matching in data transforms
+- **Zod** for runtime schema validation on all CMS responses
+
+## Architecture
+- Monorepo: 13+ apps in `/apps/`, shared libs in `/libs/` — see [libs-reference.md](libs-reference.md)
+- Publishing clients: bilanz.ch, handelszeitung.ch, schweizer-illustrierte.ch, tele.ch, pme.ch, illustre.ch, glueckspost.ch, landliebe.ch, hzinsurance.ch, boersenspiel.cash.ch
+- Internal tools: orbit.rms.rocks, console.rms.rocks, spotlight.rms.rocks
+- All packages scoped under `@dtc/*`
+
+## Config System
+- Each app has `apps/*/orbit.config.ts` — see [orbit-config-schema.md](orbit-config-schema.md) for full shape
+- Accessed in components via `virtual:siteconf` (NOT direct import of orbit.config.ts)
+- **Env overrides**: `envs.stage` / `envs.production` objects in config, merged at runtime by `initEnvsMiddleware` based on `APP_ENV`
+- Other virtual modules: `virtual:themes` (theme CSS), `virtual:i18n` (translations)
+- `VITE_SITE` env var determines which app is being built
+
+## Data Fetching
+- **Connector abstraction**: `@dtc/connector` (`libs/data-access/connector/src/connector.ts`)
+- Usage: `const connector = new Connectors(Astro); const { data, headers, error } = await connector.resolvePath(slug);`
+- **Dual CMS gateways**: `DrupalGateway` (legacy) + `RingPublishingGateway` (migration in progress)
+- Auto-switches based on `config.connectors.ringPublishing.enabled`
+- **GraphQL**: Persisted queries uploaded to S3, codegen via `@graphql-codegen` in `src/data-access/connector/codegen.sh`
+- **Validation**: All responses validated with Zod schemas from `@dtc/data-access-schema`
+- Response shape: `{ data, headers, error, status }` — headers passed to middleware for cache-control
+
+## Middleware Chain
+- Each app: `src/middleware/index.ts` using Astro's `sequence()`
+- **Order matters**: basicAuth → initEnvs → audit → debug → i18n → preview → [app-specific] → **edgeHeaders LAST**
+- `handleEdgeHeaders` sets cache-control/CDN headers and MUST be the last middleware
+- Shared middlewares: `@dtc/astro-middlewares` (`libs/astro-extensions/middlewares/src/`)
+- Apps can inject custom middleware (e.g. PocketBase feature flags) before edgeHeaders
+
+## Routing
+- **Catch-all**: `apps/*/src/pages/[...slug].astro` handles all dynamic paths
+- Dynamic rewrites: search path and author path rewritten based on `orbit.config.ts` values
+- Internal routes: `/_/` prefix rewrites to `/internal/`
+- API routes: `apps/*/src/pages/api/*.ts`
+- Error pages: `404.astro`, `403.astro`, `500.astro` per app
+
+## Styling
+- Tailwind 4 CSS-first — base config at `libs/tailwind/src/tailwind.orbit.config.css`
+- Per-app: `apps/*/src/styles/global.css` imports base, adds `@theme` tokens
+- Theme system via `virtual:themes` Vite plugin (per-app theme CSS)
+- `?url` Vite imports used in spotlight app for theme CSS loading
+- Fonts: per-app `apps/*/src/styles/fonts.css`, WOFF2 preloaded in server
+
+## i18n
+- Languages: `de` (German), `fr` (French) only
+- Global translations: `libs/i18n/src/locales/{de,fr}/translation.ts`
+- App-specific: `apps/*/src/locales/de/translation.ts` (merged with global)
+- Access: `Astro.locals.t('key')` — set up by `initI18nMiddleware`
+- Virtual module: `import { language, globalTranslation } from 'virtual:i18n'`
+
+## Testing
+- **Unit**: Vitest, co-located `*.test.ts` files, custom render: `@dtc/utils/src/test-renderer`
+- **E2E**: Playwright, `apps/*/e2e/*.spec.ts`, Chromium + Firefox, timezone Europe/Zurich
+- **NX targets**: `test:unit`, `test:e2e`, `test:unit:affected`, `test:e2e:affected`
+- Visual regression: Percy (separate GitHub Actions workflow)
+
+## Deployment
+- **Docker**: App container (Node 24 Alpine + Fastify) + Nginx container (reverse proxy + static assets)
+- **Infra**: AWS ECS Fargate, Akamai CDN, S3 (NX cache + persisted queries)
+- **CI/CD**: GitHub Actions — lint/typecheck/format/test matrix with NX affected commands
+- **Environments**: dev → stg → main (pre-prod) → prod
+- **NX remote cache**: S3-based (`@pellegrims/nx-remotecache-s3`, bucket: `orbit-nx-cache-storage`)
+- Early hints uploaded to Akamai CDN post-deploy
+
+## Component Organization
+- **Atoms** (`libs/atoms/`): Badge, Button, Dropdown, ResponsiveImage, Typography, etc.
+- **Blocks** (`libs/blocks/`): CMS paragraph types — accordion, carousel, embed, hero, teaser, video, etc.
+- **Page Types** (`libs/page-types/`): Full page templates — article, overview, author, topic, search, etc.
+- **Layout** (`libs/layout/`): Head, Meta, Header, Footer, Navigation, OneTrust, Datadog, GTM
+
+## OneTrust CMP
+- Self-hosting the stub (`otSDKStub.js`) is NOT viable — stub derives CDN base URL from its `src` attribute
+- Current optimizations: `preload` early hint for stub, `preconnect` to cookielaw.org
+- Component: `libs/layout/src/OneTrust.astro`, config: `orbit.config.ts` under `features.cmp`
+- Early hints: `apps/*/src/pages/early-hints.txt.ts`
+
+## Types
+- Shared types: `libs/types/astro/`, `libs/types/global/`, `libs/types/site-conf/`
+- `libs/types/global/` extends `Window` and `NodeJS.ProcessEnv` (secret keys shape)
+- Virtual module types declared in `libs/types/site-conf/`
+- Content types from `@dtc/data-access-schema/src/content`
+
+## Gotchas
+- Alpine.js prefix is `data-x-` not standard `x-` — all Alpine attributes must use this prefix
+- `handleEdgeHeaders` middleware MUST be last in sequence — it sets final cache headers
+- Use `virtual:siteconf` to access config in components, never import orbit.config.ts directly
+- `?url` Vite imports are intentional (spotlight theme CSS) — don't "fix" them
+- Error pages (403, 500) only accessible via internal rewrites, not direct navigation
+- GraphQL persisted queries must be re-uploaded to S3 after query changes
+- `VITE_SITE` determines which app builds — don't forget to set it

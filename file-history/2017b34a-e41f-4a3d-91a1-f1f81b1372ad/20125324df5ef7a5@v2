@@ -1,0 +1,26 @@
+# Orbit Libs Reference
+
+Full catalog of shared libraries in `/libs/`.
+
+| Path | Package | Description |
+|------|---------|-------------|
+| `libs/astro-extensions/middlewares` | `@dtc/astro-middlewares` | Astro middleware collection (auth, i18n, preview, headers, logging) |
+| `libs/astro-extensions/server` | `@dtc/astro-server` | Custom Fastify production server with static file handling |
+| `libs/astro-extensions/precompress` | `@dtc/astro-precompress` | Build-time compression (gzip, brotli, zstd) |
+| `libs/atoms` | `@dtc/atoms` | Base UI components (Badge, Button, Dropdown, ResponsiveImage, Typography) |
+| `libs/blocks` | `@dtc/blocks` | CMS block/paragraph components (accordion, carousel, embed, hero, teaser, video, etc.) |
+| `libs/cli` | `@dtc/cli` | Dev CLI tools (token updates, theme generation) |
+| `libs/data-access/connector` | `@dtc/connector` | CMS data fetching abstraction with Drupal/RingPublishing gateways |
+| `libs/data-access/schema` | `@dtc/data-access-schema` | Zod schemas for CMS content validation |
+| `libs/i18n` | `@dtc/i18n` | i18next integration with Astro/Vite plugin, de/fr locales |
+| `libs/icons` | `@dtc/icons` | SVG icon system with TypeScript types |
+| `libs/layout` | `@dtc/layout` | Layout components (Head, Meta, Header, Footer, Navigation, OneTrust, GTM) |
+| `libs/page-types` | `@dtc/page-types` | Full page templates (article, overview, author, topic, search, video, etc.) |
+| `libs/piano` | `@dtc/piano` | Piano Analytics/Paywall integration |
+| `libs/riad` | `@dtc/riad` | Ringier ad integration |
+| `libs/tailwind` | `@dtc/tailwind` | Base Tailwind 4 configuration |
+| `libs/types/astro` | `@dtc/types-orbit-astro` | TypeScript types for Astro globals |
+| `libs/types/global` | `@dtc/types-orbit-global` | Global TS definitions (Window, ProcessEnv extensions) |
+| `libs/types/site-conf` | `@dtc/types-orbit-site-conf` | Virtual module type declarations |
+| `libs/utils` | `@dtc/utils` | Shared utilities (caching, validation, structured data, constants, test-renderer) |
+| `libs/vite-plugins/site-conf` | `@dtc/vite-plugin-site-conf` | Vite plugin exposing `virtual:siteconf` module from orbit.config.ts |

@@ -1,0 +1,15 @@
+# Orbit Project Memory
+
+## OneTrust CMP
+- **Self-hosting the stub (`otSDKStub.js`) is NOT viable** — the stub derives its CDN base URL from its own `src` attribute to load the full SDK (`otBannerSdk.js`), config JSONs, and SRI hashes. Changing the src breaks the loading chain.
+- OneTrust's official self-hosting requires downloading the **entire package** (stub + SDK + configs) and re-downloading on every OneTrust admin publish. No `data-ot-host` override exists.
+- Current optimizations already in place: `preload` early hint for stub, `preconnect` to cookielaw.org. These are sufficient.
+- CMP component: `libs/layout/src/OneTrust.astro`, config per-app in `orbit.config.ts` under `features.cmp`
+- Early hints: `apps/*/src/pages/early-hints.txt.ts`
+
+## Architecture
+- Astro 5 monorepo, NX workspace, pnpm
+- 13+ apps in `/apps/`, shared libs in `/libs/`
+- Publishing clients: bilanz.ch, handelszeitung.ch, schweizer-illustrierte.ch, tele.ch, pme.ch, illustre.ch, glueckspost.ch, landliebe.ch, hzinsurance.ch, boersenspiel.cash.ch
+- Internal tools: orbit.rms.rocks, console.rms.rocks, spotlight.rms.rocks
+- `?url` Vite imports are used in the codebase (spotlight app for theme CSS)

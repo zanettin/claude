@@ -1,0 +1,758 @@
+# AI Agent Instructions for Orbit Monorepo
+
+This document contains all AI-relevant information for working with the Orbit monorepo. It consolidates instructions, patterns, conventions, and best practices to help AI agents understand and work effectively with this codebase.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Nx Workspace Guidelines](#nx-workspace-guidelines)
+- [Project Structure](#project-structure)
+- [Key Workflows](#key-workflows)
+- [Code Patterns & Conventions](#code-patterns--conventions)
+- [Testing Guidelines](#testing-guidelines)
+- [Architecture](#architecture)
+- [Security & Secrets](#security--secrets)
+- [Coding Standards](#coding-standards)
+- [Integration Points](#integration-points)
+- [Release Notes](#release-notes)
+
+---
+
+## Overview
+
+- **Monorepo managed by Nx** (version 21.4.1+)
+- **Package Manager:** pnpm (version 10.20.0+)
+- **Node Version:** >=24
+- **Main Stack:**
+  - **Astro** - Frontend framework
+  - **TypeScript** - Language
+  - **Playwright** - E2E testing
+  - **Vitest** - Unit testing
+  - **TailwindCSS** - Styling
+- **Structure:** Multiple apps (in `apps/`) and libraries (in `libs/`)
+- Each app has its own config, entrypoints, and public assets
+
+---
+
+## Nx Workspace Guidelines
+
+### General Guidelines
+
+- **Always use the Nx MCP server tools** when available
+- When answering questions, use the `nx_workspace` tool first to understand workspace architecture
+- For Nx configuration questions, use the `nx_docs` tool to get up-to-date documentation (never assume)
+- For project graph errors, use the `nx_workspace` tool to get errors
+- Use `nx_visualize_graph` to demonstrate task/project dependencies
+
+### Running Tasks Guidelines
+
+When the user wants help with tasks (test, build, lint, etc.):
+
+1. Use `nx_current_running_tasks_details` to get the list of tasks
+2. If there are tasks, ask the user which one they need help with
+3. Use `nx_current_running_task_output` to get terminal output
+4. Use the output to diagnose and fix problems
+5. To rerun: use `nx run <taskId>` (ensures proper Nx context)
+6. If task is "continuous", don't offer to rerun (it's already running)
+
+---
+
+## Project Structure
+
+### Apps (`apps/`)
+
+Each subfolder is a deployable app/site with:
+
+- `orbit.config.ts` - Site, theme, connector, and feature toggles
+- `astro.config.ts` - Astro configuration
+- `package.json` - App-specific dependencies and scripts
+- `CHANGELOG.md` - Version history and release notes for the app
+- `e2e/` - E2E tests (Playwright)
+- `public/` - Static assets
+- `src/` - Source code
+
+**Example apps:**
+
+- `spotlight.rms.rocks`
+- `orbit.rms.rocks`
+- `bilanz.ch`
+- `console.rms.rocks`
+- `glueckspost.ch`
+- `handelszeitung.ch`
+- `hzinsurance.ch`
+- `illustre.ch`
+- `landliebe.ch`
+- `pme.ch`
+- `schweizer-illustrierte.ch`
+- `tele.ch`
+
+### Libraries (`libs/`)
+
+Shared code organized by domain. Each library may contain:
+
+- `CHANGELOG.md` - Version history and release notes for the library (when versioned)
+- Library-specific source files and configuration
+
+**Library domains:**
+
+- `atoms/` - Atomic components
+- `blocks/` - Block components
+- `data-access/` - Data access layer (connector, schema)
+- `i18n/` - Internationalization
+- `icons/` - Icon components
+- `layout/` - Layout components
+- `page-types/` - Page type definitions
+- `piano/` - Piano integration
+- `riad/` - Riad integration
+- `tailwind/` - Tailwind configuration
+- `types/` - Type definitions
+- `utils/` - Utility functions
+- `vite-plugins/` - Vite plugins
+- `astro-extensions/` - Astro extensions (middlewares, precompress, server)
+
+### Configuration Files
+
+- `nx.json` - Nx workspace configuration (includes S3 cache config)
+- `package.json` - Top-level scripts and dependencies
+- `eslint.config.mjs` - ESLint configuration
+- `tsconfig.json` - TypeScript configuration
+- `tailwind.config.ts` - TailwindCSS configuration
+- `playwright.config.base.ts` - Base Playwright configuration
+
+---
+
+## Key Workflows
+
+### Installation & Setup
+
+```bash
+# Install all dependencies
+pnpm i
+
+# Install Playwright browsers (for E2E tests)
+pnpm exec playwright install
+```
+
+### Development
+
+```bash
+# Run dev server for a specific app
+pnpm nx run @dtc/orbit.rms.rocks:dev
+
+# Or for other apps
+pnpm nx run @dtc/spotlight.rms.rocks:dev
+```
+
+### Building
+
+```bash
+# Build all projects
+pnpm build:all
+
+# Build affected projects
+pnpm build:affected
+
+# Build specific project
+pnpm nx run @dtc/orbit.rms.rocks:build
+```
+
+### Testing
+
+```bash
+# Unit tests - all
+pnpm test:unit:all
+
+# Unit tests - affected
+pnpm test:unit:affected
+
+# Unit tests - specific project
+pnpm nx run @dtc/orbit.rms.rocks:test:unit
+
+# Unit tests - UI mode (in any app/lib directory)
+pnpm test:unit:ui
+
+# E2E tests - all
+pnpm test:e2e:all
+
+# E2E tests - affected
+pnpm test:e2e:affected
+
+# E2E tests - specific app
+pnpm nx run @dtc/orbit.rms.rocks:test:e2e
+
+# E2E tests - UI mode
+pnpm nx run @dtc/orbit.rms.rocks:test:e2e --ui
+
+# E2E tests - show report
+pnpm nx run @dtc/orbit.rms.rocks:test:e2e show-report
+```
+
+### Code Quality
+
+```bash
+# Lint all
+pnpm lint:all
+
+# Format all
+pnpm format:all
+
+# Typecheck all
+pnpm typecheck:all
+
+# Check all
+pnpm check:all
+```
+
+### Dependency Graph
+
+```bash
+# View dependency graph
+pnpm nx graph
+
+# View affected graph
+pnpm nx affected:graph
+```
+
+### Maintenance
+
+```bash
+# Update icon types
+pnpm icons:update
+
+# Update design tokens for all projects
+pnpm tokens:update:all
+
+# Prune lockfiles
+pnpm prune:lockfiles
+
+# Prune node_modules
+pnpm prune:node_modules
+
+# Prune Nx cache
+pnpm prune:nx
+```
+
+---
+
+## Code Patterns & Conventions
+
+### Astro
+
+- Import configuration values directly from configuration files instead of passing them as props
+- Prefer static implementations (faster and less error-prone)
+- Minimize JavaScript usage
+
+### File Structure
+
+- **apps/** - Main applications, each containing pages for the publication
+- **libs/** - Shared packages/libraries for cross-app logic
+- Use libraries for all cross-app logic
+
+### Tailwind CSS
+
+1. Use Tailwind's utility classes and extend with design tokens
+2. Avoid arbitrary classes whenever possible (they create new classes and don't scale)
+3. Use built-in animations; if creating new ones, consider performance
+4. Customize via `tailwind.base.config.ts` for design tokens
+
+### Alpine.js
+
+- **Priority:** HTML/CSS first, then Alpine.js
+- Use Alpine.js only for interactivity that cannot be accomplished without JavaScript
+- Keep codebase lightweight and maintainable
+
+### JavaScript Usage Priority
+
+Follow this hierarchy to minimize JavaScript:
+
+**Static (no JavaScript) > Alpine.js / vanilla JS > HTMX > (p)react / islands**
+
+### Data Mapping
+
+1. GQL responses from CMS ≠ App state - start from a green field
+2. Define schemas using **Zod** for validation
+3. Map data to match application schemas after validation
+4. Set proper default values for optional properties
+5. No need for existence checks afterwards (optional operator `?` is obsolete in most cases)
+6. Add and reuse utility functions from the `utils` file in mappers
+
+### Connector and Gateway
+
+- **Connector** (`connector.ts`): Logic for making API calls to services
+- **Gateway** (`gateway.ts`): Logic for processing and handling data
+- Keep these concerns separated
+
+### Error Page Handling
+
+Error pages (404, 403, 500) are handled server-side via Fastify handlers in `libs/astro-extensions/server/src/fastify.mjs`.
+
+**How it works:**
+
+1. **404 errors**:
+   - **Fastify-level 404**: Fastify's `setNotFoundHandler` rewrites the request to `/404` → Astro renders `404.astro` (prevents Fastify's default JSON "Not Found").
+   - **Astro-level 404**: Most “content not found” cases are handled in app catch-all routes like `apps/<app>/src/pages/[...slug].astro` (e.g. missing page type, invalid pagination, `slug.includes('.')`) which then do `Astro.rewrite('/404')`.
+2. **500 errors**: Fastify's `setErrorHandler` rewrites the request to `/500` → Astro renders `500.astro`
+3. **Direct access prevention**: Direct requests to `/500` and `/403` are rewritten to `/404` (prevents users from directly accessing error pages)
+
+**Error page locations:**
+
+- `apps/<app>/src/pages/404.astro` - Not Found page
+- `apps/<app>/src/pages/500.astro` - Server Error page
+- `apps/<app>/src/pages/403.astro` - Forbidden page (used for paywall/access denied)
+
+**Key points:**
+
+- Error pages are rendered via **SSR** (because apps rely on `Astro.rewrite('/404')` / `Astro.rewrite('/500')` in catch-all routes).
+- **Caching**:
+  - `setContentTypeSpecificHeaders(..., 'ServerError' | 'Forbidden')` defaults to **60s**.
+  - `NotFound` is **not** treated specially in `setContentTypeSpecificHeaders` today, so `setContentTypeSpecificHeaders(..., 'NotFound')` currently falls back to the default cache behavior (edge TTL default ~**30 days**) unless you pass an explicit `ttl` or adjust the helper.
+
+### HTMX
+
+- Use HTMX for simple interactions handled with AJAX requests
+- Examples: loading additional content, updating parts of the page
+
+### Import Order
+
+Follow this import order (enforced by ESLint):
+
+1. External (astro, astro:\*, @astrojs/\*, graphql-\*, @playwright/\*, zod, tailwindcss, vitest, @alpinejs/\*, virtual:\*, node:\*)
+2. Builtin
+3. Internal (@dtc/\*)
+4. Sibling
+5. Parent
+6. Index
+
+Alphabetize within groups (case-insensitive).
+
+---
+
+## Testing Guidelines
+
+### Unit Testing (Vitest)
+
+- **Framework:** Vitest (vite-native testing framework)
+- **Location:** Colocated with source or in `libs/`
+- **Run all:** `pnpm test:unit:all`
+- **Run affected:** `pnpm nx affected -t test:unit`
+- **Run specific:** `pnpm nx run-many -t test:unit -p @dtc/[project] --parallel=5`
+- **UI mode:** `pnpm test:unit:ui` (in any app/lib directory)
+- **Update snapshots:** `pnpm test:unit:all:update`
+
+### E2E Testing (Playwright)
+
+- **Framework:** Playwright
+- **Location:** `apps/<app>/e2e/` or in `libs/`
+- **Patterns:**
+  - Use custom viewports
+  - Mock external resources for stability
+  - Mock images and video requests to avoid flakiness
+  - Some tests require credentials from app config (`features.basicAuthentication.credentials`)
+  - Some tests skip certain apps via a blacklist array
+- **Run specific app:** `pnpm nx run @dtc/orbit.rms.rocks:test:e2e`
+- **UI mode:** `pnpm nx run @dtc/orbit.rms.rocks:test:e2e --ui`
+- **Show report:** `pnpm nx run @dtc/orbit.rms.rocks:test:e2e show-report`
+
+### Visual Regression Testing
+
+- **Tool:** Chromatic
+- **Project:** [Chromatic Builds](https://www.chromatic.com/build?appId=667c16908487868c8374ad55)
+- **Trigger:** Manual dispatch via GitHub Action workflow
+
+**Local execution:**
+
+```bash
+# Install browsers
+pnpm exec playwright install
+
+# Build and start spotlight
+pnpm nx run @dtc/spotlight.rms.rocks:build && pnpm nx run @dtc/spotlight.rms.rocks:start
+
+# Run against localhost
+TARGET_URL=https://localhost:3333 pnpm nx run @dtc/spotlight.rms.rocks:test:visual:local
+
+# Run against published version
+pnpm nx run @dtc/spotlight.rms.rocks:test:visual:local
+```
+
+---
+
+## Architecture
+
+### Core Elements
+
+#### Drupal
+
+- Mature CMS acting as primary data source
+- Provides GraphQL APIs for structured content
+- Configured as backend for articles, pages, editorial content
+
+#### Ring Publishing
+
+- Cloud-based digital publishing platform
+- Alternative CMS data source (until migration completes)
+- APIs expose editorial content and metadata
+
+**Useful Links:**
+
+- [Ring Publishing Website](https://ringpublishing.com/)
+- [Ring Publishing Help Documentation](https://help.ringpublishing.com/)
+- [Ring Publishing Developer Documentation](https://developer.ringpublishing.com/)
+- [Ring Publishing RMS Console](https://rms-console.ringpublishing.com/spaces)
+- [Content API v2 Documentation](https://developer.ringpublishing.com/docs/ContentAPI/v2/index.html)
+- [Content API Playground](https://api.ringpublishing.com/content/v2)
+- [Websites API v2 Documentation](https://developer.ringpublishing.com/docs/WebsitesAPI/v2/index.html)
+- [Websites API Playground](https://api.ringpublishing.com/websites/v2)
+
+#### Configuration
+
+- Object defining how a publication is set up
+- Specifies data sources, content types, settings, features
+- Validated using Zod schemas
+- Isolated per publication for flexibility
+
+#### Connector
+
+- Central decision-making layer
+- Switches between data sources (Drupal, Ring Publishing) based on configuration
+- Orchestrates requests to appropriate gateway
+- Keeps front-end agnostic of data source
+
+#### Gateway
+
+- Dedicated access layer for each data source
+- Handles communication logic (authentication, query building, API requests)
+- Each CMS has its own gateway (Drupal Gateway, Ring Publishing Gateway)
+- Acts as adapters for external CMS APIs
+
+#### Mapper
+
+- Transforms raw data from data sources into standardized format
+- Normalizes field names, structures, nested data
+- Validates using Zod schemas after transformation
+- Creates bridge between heterogeneous CMS data models and unified representation
+
+#### Components
+
+- Astro.js front-end building blocks
+- Render validated content into pages
+- Work independently of data source
+- Connected with Firma's design system
+- Reusable UI elements
+
+---
+
+## Security & Secrets
+
+### Secrets Management
+
+- **Storage:** AWS Secrets Manager
+- **Types:**
+  - **Common secrets:** Used by all apps
+  - **App-specific secrets:** Used by single app
+- **Naming convention:** `orbit/<env>/<common|<app>>`
+  - Examples:
+    - `orbit/develop/common` - All apps on development
+    - `orbit/stage/tele.ch` - tele.ch on stage
+
+⚠️ **IMPORTANT:** Secrets defined on `RMS Orbit (test)` and `RMS Orbit (prod)` must also be defined on `RMS Orbit (stg)` environment! Otherwise PRs pointing to other environments than `stage` won't be able to load secrets and instances might fail.
+
+### AWS Authentication
+
+Before accessing SSM secrets (e.g. for local dev or builds that require secrets), you must authenticate first:
+
+```bash
+aws_login <env>   # e.g. aws_login develop, aws_login stage, aws_login prod
+```
+
+### Using Secrets
+
+- Loaded within `init-envs.ts` middleware (injected on each request)
+- Available under `process.env.ORBIT_SECRET_KEYS`
+
+### Security Guidelines
+
+1. **Access Control:** Default deny approach to sensitive data
+2. **Error Handling:** Log all failures, exceptions, errors on trusted system
+3. **System Configuration:** Keep systems updated, remove unnecessary components
+4. **Cryptographic Practices:** Use modern algorithms, store keys/secrets/passwords in AWS Secrets Manager
+5. **Input Validation:** Validate all untrusted inputs, use standard routines for output encoding
+6. **Threat Modeling:** Keep security considerations in mind when planning tasks
+7. **Dependencies:** Use Snyk to check for vulnerabilities
+
+---
+
+## Coding Standards
+
+### Priorities (In Order)
+
+When implementing or reviewing code, follow these priorities:
+
+1. **Is it secure?** - "Do we introduce new possible vulnerabilities?"
+2. **Is it functional?** - "Does it do what it's expected to do?"
+3. **Is it maintainable?** - "Are there side effects? Is it clean and structured? Does it follow DRY and KISS? Are tests implemented?"
+4. **Is it fast?** - "Is it optimized for performance?"
+5. **Is it compliant?** - "Does it comply with our coding standards?"
+
+### Definition of Done
+
+Ensure these five core pillars are fulfilled:
+
+1. **Security** - No new vulnerabilities introduced
+2. **Functionality** - Performs as expected
+3. **Maintainability** - Clean, structured, DRY, KISS, tested
+4. **Performance** - Optimized
+5. **Compliance** - Follows coding standards
+
+### Code Review Guidelines
+
+- Review code thoroughly and understand **all** changes
+- Test it
+- Check test files and documentation
+- Follow the same priorities listed above
+
+### Performance Guidelines
+
+- Avoid unnecessary logic and assets
+- **Only ship what's needed**
+- Avoid unnecessary re-renderings
+- Static implementations are always faster and less error-prone
+- Consider lazy loading for code, stylesheets, HTML
+- Evaluate if dependencies can be removed or simplified
+
+### ESLint Rules
+
+Key rules enforced:
+
+- `import/order` - Enforces import ordering (see [Import Order](#import-order))
+- `import/no-cycle` - Prevents circular dependencies
+- `import/no-unresolved` - Warns on unresolved imports
+- `@typescript-eslint/no-unused-vars` - Warns on unused variables (allows `_` prefix)
+- `no-nested-ternary` - Error on nested ternaries
+- `import/namespace` - Off (ts-pattern throws errors)
+
+**Relaxed rules for:**
+
+- `apps/spotlight.rms.rocks/**/*` - `import/no-unresolved` and `@typescript-eslint/no-explicit-any` are off
+- `*/**/generated.ts` - `@typescript-eslint/no-explicit-any` and `@typescript-eslint/no-unused-vars` are off
+
+### TypeScript
+
+- Use proper typings
+- Avoid `any` unless in generated files or spotlight.rms.rocks
+- Use `_` prefix for intentionally unused variables/args
+
+---
+
+## Integration Points
+
+### External APIs
+
+- Apps connect to Drupal, GraphQL, SAP, etc. via endpoints in `orbit.config.ts`
+- Each app has its own `orbit.config.ts` for site, theme, connector, and feature toggles
+
+### Nx Cache
+
+- **S3 Cache:** Nx configured to use S3 for build cache
+- **Configuration:** In `nx.json`
+  - Region: `eu-central-1`
+  - Bucket: `orbit-nx-cache-storage`
+  - Mode: `read-write`
+
+### SonarQube
+
+- Quality gates and coverage tracked via SonarQube
+- Badges shown in `README.md`
+- Dashboard: [SonarQube Dashboard](https://sonarqube.rch.rintech.net/dashboard?id=RingierAG_orbit_AY4yyJk05u4g3nUXmdXC)
+
+### DataDog CI
+
+- Test results uploaded to DataDog CI
+- Command: `pnpm datadog-ci`
+- Service: `orbit`
+- Service version: `1.0.0`
+
+### GitHub Actions
+
+#### Dependency Upgrade Action
+
+Location: `.github/actions/release/dependency-upgrade/action.yml`
+
+Use this composite action to **upgrade `@dtc/*` dependencies for a single app** (i.e. a package under `apps/<app>/package.json`) and optionally **open a PR** with the changes.
+
+- **Inputs**
+  - `package-name` (**required**): e.g. `@dtc/bilanz.ch` (maps to `apps/bilanz.ch`)
+  - `upgrade-scope` (default: `all`): one of `dependencies`, `devDependencies`, `all`
+  - `dry-run` (default: `false`): when `true`, runs the update in dry-run mode and **does not** create a branch/commit/PR
+  - `base-branch` (default: `main`): branch to base the upgrade branch/PR on
+  - `commit-message` (optional): custom commit message (otherwise uses `chore: upgrade @dtc dependencies for <package> (<scope>)`)
+  - `github-token` (optional): token used for checkout + PR creation (defaults to `github.token`)
+  - `orbitNpmReadOnlyToken` (**required**): npm token to install `@dtc/*` packages
+  - `nodeVersion` (optional): Node version passed to the shared setup action (defaults to `.nvmrc` via `setup-env`)
+
+- **Behavior**
+  - Validates that `apps/<app>` exists and contains a `package.json`.
+  - For `dry-run=false`:
+    - Creates a branch named `upgrade-deps/<app>-<scope>-<timestamp>`.
+    - Computes upgrade args via `scripts/upgrade-dtc-deps.mjs` (fast: 1x `pnpm outdated --json '@dtc/*'`, then max 2x `pnpm add`).
+      - Skips `workspace:` / `link:` / `file:` / `portal:` specs (keeps monorepo links intact)
+      - Dedupes packages between `dependencies` and `devDependencies` (dependency wins)
+      - Uses `--save-exact` for deterministic pinning
+    - Creates a changeset using `pnpm changeset add --empty` and fills it using the computed `bump_type` (`patch`/`minor`/`major`).
+    - Diffs `package.json` and checks `pnpm-lock.yaml` changes, then commits and pushes.
+    - Creates a PR via GitHub REST API, labels it with `env:development`, `CD`, and `app:<app>`, and assigns it to the triggering actor.
+
+### Environment Variables
+
+- Use `.env` files or `process.env` in configs/scripts
+- Secrets loaded from AWS Secrets Manager via middleware
+
+---
+
+## Release Notes
+
+### Overview
+
+When generating release notes for Slack deployment announcements, follow these guidelines to create comprehensive, stakeholder-friendly release messages.
+
+**Important:** Display the release notes directly in the chat conversation (not in a file) so they can be easily copied and pasted into Slack. Do not create any markdown files for release notes.
+
+### Format
+
+Release notes should follow this structure:
+
+```
+:rocket: We are going to deploy the following updates:
+
+[SITE_EMOJI] [site] from version [X.X.X] to version [Y.Y.Y]
+
+:wrench: Main Updates:
+- [description of main changes]
+
+:gear: Dependency Updates:
+- `[package-name]` (new: [version]): [brief description of what this update includes]
+```
+
+### Requirements
+
+1. **Use emojis for visual appeal** - Use appropriate emojis throughout the message
+2. **Group changes** - Separate "Main Updates" (feature changes, bug fixes, etc.) from "Dependency Updates"
+3. **Dependency details** - For dependency updates, include:
+   - The actual version changes
+   - A brief description of what each dependency update includes (not just "updated for better compatibility")
+   - Explain what the dependency changes actually mean in stakeholder-friendly language
+4. **Stakeholder-friendly** - Explain business value, not just technical details
+
+### Site-Specific Emojis
+
+Use the following Slack emojis for each site:
+
+- `bilanz.ch`: :chart_with_upwards_trend:
+- `tele.ch`: :tv:
+- `illustre.ch`: :newspaper:
+- `handelszeitung.ch`: :chart_with_upwards_trend:
+- `schweizer-illustrierte.ch`: :camera:
+- `landliebe.ch`: :ear_of_rice:
+- `pme.ch`: :briefcase:
+- `hzinsurance.ch`: :shield:
+- `hzbanking.ch`: :bank:
+- `spotlight.rms.rocks`: :sparkles:
+- `orbit.rms.rocks`: :rocket:
+- `console.rms.rocks`: :gear:
+- Default: :page_facing_up:
+
+### Generation Process
+
+When generating release notes from version X to version Y:
+
+1. **Read changelog files** - Analyze changelogs for each site/app from the specified version range
+   - The "from" version should be incremented (patch +1) to exclude the starting version from analysis
+   - For example, if analyzing from `2.1.13` to `2.3.1`, analyze changes starting from `2.1.14`
+
+2. **Extract meaningful changes** - Focus on:
+   - Feature additions
+   - Bug fixes
+   - Performance improvements
+   - Security updates
+   - Breaking changes (if any)
+   - Avoid listing only dependency bumps without context
+
+3. **Check dependency changelogs** - For each dependency update:
+   - Read the actual changelog of that dependency to understand what it includes
+   - Check the version being updated to and what changes it brings
+
+4. **Check nested dependencies** - **IMPORTANT**: When a dependency (e.g., `@dtc/orbit.rms.rocks`) is updated, check its changelog. If that dependency has its own dependencies updated (e.g., `@dtc/connector`), read those nested dependency changelogs too and include meaningful changes from them in the release notes.
+   - Example: If `orbit.rms.rocks@1.22.2` updates `connector@5.13.1`, check the connector changelog for version `5.13.1` and include any meaningful changes (like "Switch to dedicated ring keys") in the release notes.
+
+5. **Provide meaningful descriptions** - For each dependency update:
+   - Include a brief but meaningful description of what the update brings
+   - Include changes from nested dependencies when relevant
+   - Explain the business value or impact, not just technical details
+
+6. **Formatting rules**:
+   - Use emojis throughout the message
+   - Don't use emojis in the Dependency Updates section - use package names and bullet points instead
+   - Remove the `@` prefix from `@dtc/xxx` package names in the output (e.g., use `dtc/orbit.rms.rocks` instead of `@dtc/orbit.rms.rocks`)
+   - Verify the output is in the correct format and emojis are used correctly
+
+7. **Output format**:
+   - Display the release notes directly in the chat conversation using a code block
+   - Do NOT create any markdown files - the notes should be ready to copy and paste from the chat
+   - Format the output in a code block so it can be easily copied
+
+### Example
+
+```
+:rocket: We are going to deploy the following updates:
+
+:chart_with_upwards_trend: bilanz.ch from version 2.1.13 to version 2.3.1
+
+:wrench: Main Updates:
+- Improved article loading performance
+- Fixed issue with image lazy loading
+- Added support for new content type
+
+:gear: Dependency Updates:
+- `dtc/orbit.rms.rocks` (new: 1.22.2): Updated connector to use dedicated ring keys, improved error handling
+- `dtc/connector` (new: 5.13.1): Switch to dedicated ring keys for better security
+- `@astrojs/tailwind` (new: 5.1.0): Updated Tailwind integration with improved build performance
+```
+
+### Changelog Locations
+
+Changelog files are located in the project structure as documented in the [Project Structure](#project-structure) section:
+
+- `apps/<app-name>/CHANGELOG.md` - For app-specific changes
+- `libs/<lib-name>/CHANGELOG.md` - For library-specific changes (when versioned)
+
+---
+
+## Examples & References
+
+### Example Files
+
+- **E2E Test:** `apps/spotlight.rms.rocks/e2e/chromatic.spec.ts` - Playwright E2E test conventions (mocking, credentials, viewports)
+- **Library Scripts:** `libs/utils/package.json` - Library-level scripts and dependencies
+- **App Config:** `apps/orbit.rms.rocks/orbit.config.ts` - Example app configuration
+
+### Documentation
+
+- **Setup Guide:** [Setup Documentation](https://spotlight.rms.rocks/documentation/setup)
+- **Architecture:** See `apps/spotlight.rms.rocks/src/data/documentation/architecture-and-core-concepts/architecture.md`
+- **Best Practices:** See `apps/spotlight.rms.rocks/src/data/documentation/best-practices/`
+- **Coding Guidelines:** See `apps/spotlight.rms.rocks/src/data/documentation/best-practices/coding-guidelines.md`
+- **Testing:** See `apps/spotlight.rms.rocks/src/data/documentation/best-practices/testing.md`
+
+---
+
+## Additional Notes
+
+- If unclear on a workflow or convention, check the relevant app's `README.md` or config files
+- Each app may have its own specific patterns - check app-specific documentation
+- Always prefer using Nx tools when available
+- When in doubt, use `nx_docs` for Nx-specific questions
+- Follow the JavaScript usage priority: Static > Alpine.js > HTMX > React/Islands
+
+---
+
+**Last Updated:** Generated from project documentation and configuration files

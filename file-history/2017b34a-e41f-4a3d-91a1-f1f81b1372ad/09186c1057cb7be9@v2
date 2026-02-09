@@ -1,0 +1,83 @@
+# orbit.config.ts Schema Reference
+
+Each app defines its configuration at `apps/*/orbit.config.ts`. Accessed at runtime via `virtual:siteconf`.
+
+## Top-level shape
+
+```
+site:
+  name: string                    # Display name (e.g. "Bilanz")
+  language: 'de' | 'fr'
+  locale: 'de-CH' | 'fr-CH'
+  publishDateFormat: 'default' | 'combined'
+  socialMedia: Record<Platform, { url, metaAttributes? }>
+  googleAnalyticsId?: string
+  errorPageLinks?: Array          # Links shown on 404/500 pages
+
+theme:
+  name: string                    # Theme identifier (e.g. 'bilanz')
+
+connectors:
+  drupal:                         # Legacy CMS
+    publication: string           # Code (e.g. 'BIL')
+    endpoint: string              # GraphQL endpoint
+    headers: { 'x-ras-publication': string }
+    navigationQueryName: string
+    footerNavigationQueryName: string
+    envs?: { stage?, production? }
+
+  ringPublishing?:                # New CMS (migration)
+    enabled: boolean
+    endpoint: string
+    contentSpaceUuid: string
+    websiteSpaceUuid: string
+    envs?: { production? }
+
+  graphqlService:                 # Internal GraphQL service
+    publication: string
+    endpoint: string
+    headers: { 'x-ras-publication': string }
+    envs?: { stage?, production? }
+
+  pocketBase?:                    # Feature flags
+    endpoint: string
+    envs?: { stage?, production? }
+
+  sap?:                           # SAP integration
+    serviceUrl: string
+    headers: string               # Basic auth
+    envs?: { stage?, production? }
+
+features:
+  ads?: { enabled, publication, environment, ... }
+  authentication?: { enabled, domain, clientId, ... }
+  basicAuthentication?: { enabled, credentials, whitelist }
+  brightcove?: { enabled, accountId, playerId }
+  cmp?: { enabled, id }          # OneTrust
+  datadog?: { enabled, applicationName, clientToken, rum?, ... }
+  gtm?: { enabled, id, preview, auth }
+  piano?: { enabled, alertId, applicationId }  # Paywall
+  preview?: { enabled, cmsEndpoint }
+  search?: { enabled, searchPath }
+  utilityBar?: { enabled, share, print, listen }
+  # ... more feature flags per app
+
+settings:
+  hosting:
+    host: string                  # Domain without protocol
+    domain: string                # Full URL with protocol
+    whitelistedDomains: string[]
+    envs?: { stage?, production? }
+
+schema:                           # SEO structured data
+  description: string
+  email: string
+  telephone: string
+  address: { streetAddress, addressLocality, ... }
+  contactPoint: { contactType, telephone, email }
+```
+
+## Key patterns
+- **Env overrides**: Any section with `envs` can override values per environment. Merged at runtime by `initEnvsMiddleware` based on `APP_ENV`.
+- **Feature toggles**: All under `features.*`, each has at minimum `{ enabled: boolean }`.
+- **Connectors**: Multiple CMS backends, auto-switched based on `ringPublishing.enabled`.
